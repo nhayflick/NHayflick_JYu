@@ -1,10 +1,10 @@
 class Square
-  attr_reader :location,
+  attr_reader :position,
               :has_bomb,
-              :neighbors,
-              :adjacent_bombs
+              :neighbors
 
-  attr_accessor :viewstate
+
+  attr_accessor :viewstate, :adjacent_bombs
 
   def initialize(position, has_bomb)
     @position = position
@@ -15,7 +15,7 @@ class Square
   end
 
   def place_bomb
-    :has_bomb = true
+    @has_bomb = true
   end
 
   def has_bomb?
@@ -41,15 +41,14 @@ class Board
     @bomb_count = bomb_count
     @board_array = Array.new(size) {Array.new(size)}
     add_squares(@board_array)
-    plant_bombs(@board_array, @bombs)
+    plant_bombs(@bomb_count)
     build_square_data(@board_array)
-    play
   end
 
   def add_squares(board_array)
     board_array.each_with_index do |row, y|
       row.each_with_index do |square, x|
-        Square.new([x,y], false)
+        board_array[y][x] = Square.new([x,y], false)
       end
     end
   end
@@ -66,9 +65,9 @@ class Board
     end
   end
 
-  def build_square_data
-    board_array.each_with_index do |row, y|
-      row.each_with_index do |square, x|
+  def build_square_data(board_array)
+    board_array.each do |row|
+      row.each do |square|
         get_neighbors(square)
         get_adjacent_bombs(square)
       end
@@ -76,15 +75,17 @@ class Board
   end
 
   def get_neighbors(square)
-    x,y = square.location[0], square.location[1]
-    neighbor_array = [[x - 1, y + 1],
-                      [x, y + 1],
-                      [x + 1, y + 1],
-                      [x - 1, y],
-                      [x + 1, y],
-                      [x - 1, y - 1],
-                      [x, y - 1],
-                      [x + 1, y - 1]]
+    row,col = square.position[0], square.position[1]
+
+    neighbor_array = [[row - 1, col - 1],
+                      [row - 1, col],
+                      [row - 1, col + 1],
+                      [row, col + 1],
+                      [row + 1, col +1],
+                      [row + 1, col],
+                      [row + 1, col -1],
+                      [row, col - 1]]
+
     neighbor_array.each do |neighbor_position|
       if get_square(neighbor_position).class == Square
         square.neighbors << get_square(neighbor_position)
@@ -99,13 +100,13 @@ class Board
   end
 
   def get_square(position)
-    board_array[position[0]][position[1]]
+    board_array[position[1]][position[0]]
   end
 
   def play
     minesweeper = Board.new
     user = Player.new
-    until update_board != :game_in_progress
+    until false #update_board != :game_in_progress
       move_valid = false
       pos_valid = false
       until pos_valid == true && move_valid == true
@@ -126,6 +127,8 @@ class Board
             return :loser
           else
             if square.adjacent_bombs > 0
+
+            end
 
           end
         elsif square.viewstate == :flagged
