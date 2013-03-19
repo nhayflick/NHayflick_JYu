@@ -37,7 +37,8 @@ class Board
   def initialize(size = 9, bomb_count = 8)
     @size = size
     @bomb_count = bomb_count
-    @board_array = Array.new(size) {Array.new(size)}
+    @board_array = Array.new(size) { Array.new(size) }
+    # REV: (fyi) alternative: Array.new(size, Array.new(size))
     add_squares(@board_array)
     plant_bombs(@bomb_count)
     #build_square_data(@board_array)
@@ -46,7 +47,7 @@ class Board
   def add_squares(board_array)
     board_array.each_with_index do |row, y|
       row.each_with_index do |square, x|
-        board_array[y][x] = Square.new([x,y], false)
+        board_array[y][x] = Square.new([x, y], false)
       end
     end
   end
@@ -77,6 +78,7 @@ class Board
     square.neighbors = []
     row,col = square.position[0], square.position[1]
 
+    # REV: I like this. It's a lot nicer to read than the double loop I had.
     neighbor_array = [[row - 1, col - 1],
                       [row - 1, col],
                       [row - 1, col + 1],
@@ -87,12 +89,17 @@ class Board
                       [row, col - 1]]
 
     neighbor_array.each do |neighbor_position|
-      if neighbor_position[0] >= 0 && neighbor_position[0] < @size && neighbor_position[1] >= 0 && neighbor_position[1] < @size
+      # if neighbor_position[0] >= 0 && neighbor_position[0] < @size && neighbor_position[1] >= 0 && neighbor_position[1] < @size
+      # REV: Above line is a bit long and repetitive. Consider shortening it.
+      # Here's what I came up with:
+      if neighbor_position.all? { |x| x.between(0, size - 1) }
         square.neighbors << get_square(neighbor_position)
       end
     end
   end
 
+  # REV: Consider renaming to "num_adjacent_bombs", since that's what it
+  # returns.
   def get_adjacent_bombs(square)
     square.adjacent_bombs = 0
     square.neighbors.each do |neighbor|
@@ -125,8 +132,10 @@ class Board
     puts "You Win! puts #{@bomb_count}"
   end
 
+  # REV: Considering decomposing this methods into helper methods?
   def update(square)
     get_neighbors(square)
+
     if square.ever_opened == false
       square.ever_opened = true
       if square.has_bomb?
@@ -153,15 +162,19 @@ class Board
        false_flags += 1 if !square.has_bomb? && square.viewstate == :flagged
       end
     end
+    # REV: Might be able to express the underlying logic better as:
+    # if flagged_bombs == @bomb_count && false_flags == 0
     if flagged_bombs - false_flags == @bomb_count
       return true
     end
-    return false
 
+    return false
   end
 
   def position_valid?(position)
-    position.none? {|coordinate| coordinate > @size || coordinate < 0} &&
+    # position.none? {|coordinate| coordinate > @size || coordinate < 0} &&
+    # REV: Here's a shorter way to do the above line:
+    position.all? { |coord| coord.between(0, @size) } &&
     get_square(position).viewstate != :revealed
   end
 
@@ -169,11 +182,13 @@ class Board
     [:toggle_flag, :reveal].include?(action.to_sym)
   end
 
+  # REV: Could shorten the lines here by using when/then.
   def print_board(board)
     board.each do |row|
       row.each do |square|
         print "|"
         case square.viewstate
+        # REV: when/then example: when :* then print "*"
         when :*
           print "*"
         when :flagged
