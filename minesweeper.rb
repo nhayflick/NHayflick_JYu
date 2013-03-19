@@ -1,10 +1,8 @@
 class Square
   attr_reader :position,
-              :has_bomb,
-              :neighbors
+              :has_bomb
 
-
-  attr_accessor :viewstate, :adjacent_bombs
+  attr_accessor :viewstate, :adjacent_bombs, :neighbors, :ever_opened
 
   def initialize(position, has_bomb)
     @position = position
@@ -12,6 +10,7 @@ class Square
     @viewstate = :*
     @adjacent_bombs = 0
     @neighbors = []
+    @ever_opened = false
   end
 
   def place_bomb
@@ -35,7 +34,7 @@ end
 class Board
   attr_accessor :board_array
 
-  def initialize(size = 9, bomb_count = 10)
+  def initialize(size = 9, bomb_count = 8)
     @size = size
     @bomb_count = bomb_count
     @board_array = Array.new(size) {Array.new(size)}
@@ -59,6 +58,7 @@ class Board
       selected_square = get_square(bomb_position)
       if !selected_square.has_bomb?
         selected_square.place_bomb
+        p "bomb planted #{selected_square.position}"
         planted_bombs += 1
       end
     end
@@ -74,6 +74,7 @@ class Board
   #end
 
   def get_neighbors(square)
+    square.neighbors = []
     row,col = square.position[0], square.position[1]
 
     neighbor_array = [[row - 1, col - 1],
@@ -93,9 +94,11 @@ class Board
   end
 
   def get_adjacent_bombs(square)
+    square.adjacent_bombs = 0
     square.neighbors.each do |neighbor|
       square.adjacent_bombs += 1 if neighbor.has_bomb?
     end
+    square.adjacent_bombs
   end
 
   def get_square(position)
@@ -117,18 +120,22 @@ class Board
       if update(square_selected) == :loser
         return
       end
+      print_board(board_array)
     end
     puts "You Win! puts #{@bomb_count}"
   end
 
   def update(square)
-    if square.viewstate == :revealed
+    get_neighbors(square)
+    if square.ever_opened == false
+      square.ever_opened = true
       if square.has_bomb?
         puts "Bomb found. You lose."
         return :loser
       elsif get_adjacent_bombs(square) == 0
-        get_neighbors(square)
         square.neighbors.each do |square|
+          get_neighbors(square)
+          get_adjacent_bombs(square)
           square.change_square(:reveal) unless square.viewstate == :flagged
           update(square)
         end
@@ -160,6 +167,33 @@ class Board
 
   def move_valid?(action)
     [:toggle_flag, :reveal].include?(action.to_sym)
+  end
+
+  def print_board(board)
+    board.each do |row|
+      row.each do |square|
+        print "|"
+        case square.viewstate
+        when :*
+          print "*"
+        when :flagged
+          print "F"
+        when :reveal
+          if square.has_bomb?
+            print "BOOM, you're dead"
+          else
+            #get_neighbors(square)
+            get_adjacent_bombs(square)
+            if square.adjacent_bombs == 0
+              print "_"
+            else
+              print square.adjacent_bombs
+            end
+          end
+        end
+      end
+      print "| \n"
+    end
   end
 
 end
