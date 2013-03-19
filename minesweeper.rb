@@ -25,7 +25,6 @@ class Square
   def change_square(action)
     if action == :reveal
       @viewstate = :reveal
-
     else
       @viewstate = @viewstate == :flagged ? :* : :flagged
     end
@@ -42,7 +41,7 @@ class Board
     @board_array = Array.new(size) {Array.new(size)}
     add_squares(@board_array)
     plant_bombs(@bomb_count)
-    build_square_data(@board_array)
+    #build_square_data(@board_array)
   end
 
   def add_squares(board_array)
@@ -65,14 +64,14 @@ class Board
     end
   end
 
-  def build_square_data(board_array)
-    board_array.each do |row|
-      row.each do |square|
-        get_neighbors(square)
-        get_adjacent_bombs(square)
-      end
-    end
-  end
+  #def build_square_data(board_array)
+  #  board_array.each do |row|
+  #    row.each do |square|
+  #      get_neighbors(square)
+  #      get_adjacent_bombs(square)
+  #    end
+  #  end
+  #end
 
   def get_neighbors(square)
     row,col = square.position[0], square.position[1]
@@ -87,7 +86,7 @@ class Board
                       [row, col - 1]]
 
     neighbor_array.each do |neighbor_position|
-      if get_square(neighbor_position).class == Square
+      if neighbor_position[0] >= 0 && neighbor_position[0] < @size && neighbor_position[1] >= 0 && neighbor_position[1] < @size
         square.neighbors << get_square(neighbor_position)
       end
     end
@@ -104,9 +103,8 @@ class Board
   end
 
   def play
-    minesweeper = Board.new
     user = Player.new
-    until false #update_board != :game_in_progress
+    until win?(board_array)
       move_valid = false
       pos_valid = false
       until pos_valid == true && move_valid == true
@@ -114,30 +112,45 @@ class Board
         pos_valid = position_valid?(user_move[0])
         move_valid = move_valid?(user_move[1])
       end
-      get_square(user_move[0]).change_square(user_move[1])
+      square_selected = get_square(user_move[0])
+      square_selected.change_square(user_move[1])
+      if update(square_selected) == :loser
+        return
+      end
+    end
+    puts "You Win! puts #{@bomb_count}"
+  end
+
+  def update(square)
+    if square.viewstate == :revealed
+      if square.has_bomb?
+        puts "Bomb found. You lose."
+        return :loser
+      elsif get_adjacent_bombs(square) == 0
+        get_neighbors(square)
+        square.neighbors.each do |square|
+          square.change_square(:reveal) unless square.viewstate == :flagged
+          update(square)
+        end
+      end
     end
   end
 
-  def update_board
-    board_array.each_with_index do |row, y|
-      row.each_with_index do |square, x|
-        if square.viewstate == :revealed
-          if square.has_bomb?
-            puts "Bomb found. You lose."
-            return :loser
-          else
-            if square.adjacent_bombs > 0
+  def win?(board_array)
+    flagged_bombs = 0
+    false_flags = 0
 
-            end
-
-          end
-        elsif square.viewstate == :flagged
-        else
-        end
-
-
+    board_array.each do |row|
+      row.each do |square|
+       flagged_bombs += 1 if square.has_bomb? && square.viewstate == :flagged
+       false_flags += 1 if !square.has_bomb? && square.viewstate == :flagged
       end
     end
+    if flagged_bombs - false_flags == @bomb_count
+      return true
+    end
+    return false
+
   end
 
   def position_valid?(position)
@@ -152,11 +165,13 @@ class Board
 end
 
 class Player
-
   def get_move
     puts "Enter square location or action"
-    puts "[x,y] reveal or [x,y] toggle_flag"
+    puts "x y reveal or x y toggle_flag"
     input = gets.chomp.split(' ')
-    move_position, move_type = input.first.to_a, input.last.to_sym
+    move_position, move_type = [input.first.to_i, input[1].to_i], input[2].to_sym
   end
 end
+
+minesweeper = Board.new
+minesweeper.play
