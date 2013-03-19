@@ -1,3 +1,6 @@
+#REV: I think your square class is a bit complicated. If you stored the 
+#     the state of the square in a hash you would be able to serialize 
+#     the data easer and the logic might be simpler as well.  
 class Square
   attr_reader :position,
               :has_bomb
@@ -32,7 +35,7 @@ class Square
 end
 
 class Board
-  attr_accessor :board_array
+  attr_accessor :board_array 
 
   def initialize(size = 9, bomb_count = 8)
     @size = size
@@ -197,6 +200,16 @@ class Board
   end
 
 end
+=begin
+REV: 
+Do you need a player class? I think what you need is a class for the board
+and then a class for the game? I think its nice when one class hase all 
+the puts and gets statements and then another class contians all the logic. 
+That might also be useful for debugging. 
+
+You have a lot of deeply nested conditional statements. I think this is a bit of 
+a code smell. I would try breaking up the logic into more methods. 
+=end
 
 class Player
   def get_move
